@@ -2,6 +2,7 @@
 package com.example.telegram2youtubeai
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
@@ -30,6 +32,7 @@ private enum class Screen(val label: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TelegramYouTubeApp() {
+    val context = LocalContext.current
     var screen by remember { mutableStateOf(Screen.Home) }
     var monitoring by remember { mutableStateOf(false) }
     var channelInput by remember { mutableStateOf("") }
@@ -62,7 +65,10 @@ private fun TelegramYouTubeApp() {
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (screen) {
@@ -71,73 +77,177 @@ private fun TelegramYouTubeApp() {
                     Card {
                         Column(Modifier.padding(16.dp)) {
                             Text("Monitoring")
-                            Text(if (monitoring) "Demo monitoring is ON" else "Demo monitoring is OFF")
-                            Switch(checked = monitoring, onCheckedChange = {
-                                monitoring = it
-                                activity.add(if (it) "Demo monitoring enabled" else "Demo monitoring disabled")
-                            })
+                            Text(
+                                if (monitoring) "Demo monitoring is ON"
+                                else "Demo monitoring is OFF"
+                            )
+                            Switch(
+                                checked = monitoring,
+                                onCheckedChange = {
+                                    monitoring = it
+                                    activity.add(
+                                        if (it) "Demo monitoring enabled"
+                                        else "Demo monitoring disabled"
+                                    )
+                                }
+                            )
                         }
                     }
                     SummaryCard("Channels added", channels.size.toString())
-                    SummaryCard("Videos awaiting approval", if (pending) "1 demo item" else "0")
+                    SummaryCard(
+                        "Videos awaiting approval",
+                        if (pending) "1 demo item" else "0"
+                    )
                     Text(
-                        "Demo only: no Telegram monitoring or YouTube uploads are connected.",
+                        "Demo only: Telegram monitoring and YouTube uploads are not connected.",
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }
+
                 Screen.Channels -> {
-                    Text("Authorized channels", style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        "Authorized channels",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+
                     OutlinedTextField(
                         value = channelInput,
                         onValueChange = { channelInput = it },
                         label = { Text("Public channel username or link") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("@channelname or https://t.me/channelname") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
-                    Button(onClick = {
-                        val value = channelInput.trim()
-                        if (value.isNotEmpty() && !channels.contains(value)) {
-                            channels.add(value)
-                            activity.add("Channel added: $value")
-                            channelInput = ""
-                        }
-                    }) { Text("Add channel") }
-                    if (channels.isEmpty()) Text("No channels added yet.")
+
+                    Button(
+                        onClick = {
+                            val value = channelInput.trim()
+                            val username = value
+                                .removePrefix("https://t.me/")
+                                .removePrefix("http://t.me/")
+                                .removePrefix("t.me/")
+                                .removePrefix("@")
+                                .substringBefore("/")
+                                .substringBefore("?")
+                                .trim()
+
+                            val valid = username.matches(
+                                Regex("[A-Za-z0-9_]{5,32}")
+                            )
+
+                            when {
+                                value.isEmpty() -> {
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter a channel username or link",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                !valid -> {
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter a valid public channel username or link",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+
+                                channels.any {
+                                    it.equals(username, ignoreCase = true)
+                                } -> {
+                                    Toast.makeText(
+                                        context,
+                                        "This channel is already added",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                else -> {
+                                    channels.add(username)
+                                    activity.add("Channel added: @$username")
+                                    channelInput = ""
+                                    Toast.makeText(
+                                        context,
+                                        "Channel added successfully",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Add channel")
+                    }
+
+                    if (channels.isEmpty()) {
+                        Text("No channels added yet.")
+                    }
+
                     LazyColumn {
                         items(channels) { channel ->
                             ListItem(
-                                headlineContent = { Text(channel) },
+                                headlineContent = { Text("@$channel") },
                                 trailingContent = {
-                                    IconButton(onClick = {
-                                        channels.remove(channel)
-                                        activity.add("Channel removed: $channel")
-                                    }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Remove")
+                                    IconButton(
+                                        onClick = {
+                                            channels.remove(channel)
+                                            activity.add("Channel removed: @$channel")
+                                            Toast.makeText(
+                                                context,
+                                                "Channel removed",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Remove"
+                                        )
                                     }
                                 }
                             )
                         }
                     }
                 }
+
                 Screen.Approvals -> {
-                    Text("Video approvals", style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        "Video approvals",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
                     if (pending) {
                         Card {
                             Column(
                                 Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Sample detected video", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "Sample detected video",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
                                 Text("Source: Demo channel")
-                                Text("This is placeholder content. No real video has been detected.")
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "Placeholder only. No real video has been detected."
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Button(onClick = {
                                         pending = false
-                                        activity.add("Demo item approved — no upload performed")
-                                    }) { Text("Approve (demo)") }
+                                        activity.add(
+                                            "Demo item approved — no upload performed"
+                                        )
+                                    }) {
+                                        Text("Approve (demo)")
+                                    }
                                     OutlinedButton(onClick = {
                                         pending = false
                                         activity.add("Demo item rejected")
-                                    }) { Text("Reject") }
+                                    }) {
+                                        Text("Reject")
+                                    }
                                 }
                             }
                         }
@@ -145,19 +255,26 @@ private fun TelegramYouTubeApp() {
                         Text("No pending demo items.")
                     }
                 }
+
                 Screen.Activity -> {
-                    Text("Activity history", style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        "Activity history",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
                     LazyColumn {
                         items(activity.reversed()) { event ->
                             ListItem(headlineContent = { Text(event) })
                         }
                     }
                 }
+
                 Screen.Settings -> {
                     Text("Settings", style = MaterialTheme.typography.headlineMedium)
                     ListItem(
                         headlineContent = { Text("YouTube account") },
-                        supportingContent = { Text("Not connected — integration is not implemented") }
+                        supportingContent = {
+                            Text("Not connected — integration is not implemented")
+                        }
                     )
                     ListItem(
                         headlineContent = { Text("Notifications") },
