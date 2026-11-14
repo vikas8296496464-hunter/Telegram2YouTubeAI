@@ -65,22 +65,19 @@ private fun TelegramYouTubeApp() {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize()
+                .padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (screen) {
                 Screen.Home -> {
-                    Text("Dashboard", style = MaterialTheme.typography.headlineMedium)
+                    Text("Dashboard",
+                        style = MaterialTheme.typography.headlineMedium)
                     Card {
                         Column(Modifier.padding(16.dp)) {
                             Text("Monitoring")
-                            Text(
-                                if (monitoring) "Demo monitoring is ON"
-                                else "Demo monitoring is OFF"
-                            )
+                            Text(if (monitoring) "Demo monitoring is ON"
+                                else "Demo monitoring is OFF")
                             Switch(
                                 checked = monitoring,
                                 onCheckedChange = {
@@ -94,10 +91,8 @@ private fun TelegramYouTubeApp() {
                         }
                     }
                     SummaryCard("Channels added", channels.size.toString())
-                    SummaryCard(
-                        "Videos awaiting approval",
-                        if (pending) "1 demo item" else "0"
-                    )
+                    SummaryCard("Videos awaiting approval",
+                        if (pending) "1 demo item" else "0")
                     Text(
                         "Demo only: Telegram monitoring and YouTube uploads are not connected.",
                         color = MaterialTheme.colorScheme.secondary
@@ -105,10 +100,8 @@ private fun TelegramYouTubeApp() {
                 }
 
                 Screen.Channels -> {
-                    Text(
-                        "Authorized channels",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text("Authorized channels",
+                        style = MaterialTheme.typography.headlineMedium)
 
                     OutlinedTextField(
                         value = channelInput,
@@ -121,8 +114,8 @@ private fun TelegramYouTubeApp() {
 
                     Button(
                         onClick = {
-                            val value = channelInput.trim()
-                            val username = value
+                            val input = channelInput.trim()
+                            val username = input
                                 .removePrefix("https://t.me/")
                                 .removePrefix("http://t.me/")
                                 .removePrefix("t.me/")
@@ -131,46 +124,28 @@ private fun TelegramYouTubeApp() {
                                 .substringBefore("?")
                                 .trim()
 
-                            val valid = username.matches(
-                                Regex("[A-Za-z0-9_]{5,32}")
-                            )
-
                             when {
-                                value.isEmpty() -> {
-                                    Toast.makeText(
-                                        context,
+                                username.isEmpty() -> {
+                                    Toast.makeText(context,
                                         "Please enter a channel username or link",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-
-                                !valid -> {
-                                    Toast.makeText(
-                                        context,
-                                        "Please enter a valid public channel username or link",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                        Toast.LENGTH_SHORT).show()
                                 }
 
                                 channels.any {
                                     it.equals(username, ignoreCase = true)
                                 } -> {
-                                    Toast.makeText(
-                                        context,
-                                        "This channel is already added",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    Toast.makeText(context,
+                                        "Channel already added",
+                                        Toast.LENGTH_SHORT).show()
                                 }
 
                                 else -> {
                                     channels.add(username)
                                     activity.add("Channel added: @$username")
                                     channelInput = ""
-                                    Toast.makeText(
-                                        context,
+                                    Toast.makeText(context,
                                         "Channel added successfully",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                        Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
@@ -190,21 +165,12 @@ private fun TelegramYouTubeApp() {
                             ListItem(
                                 headlineContent = { Text("@$channel") },
                                 trailingContent = {
-                                    IconButton(
-                                        onClick = {
-                                            channels.remove(channel)
-                                            activity.add("Channel removed: @$channel")
-                                            Toast.makeText(
-                                                context,
-                                                "Channel removed",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Remove"
-                                        )
+                                    IconButton(onClick = {
+                                        channels.remove(channel)
+                                        activity.add("Channel removed: @$channel")
+                                    }) {
+                                        Icon(Icons.Default.Delete,
+                                            contentDescription = "Remove")
                                     }
                                 }
                             )
@@ -213,32 +179,23 @@ private fun TelegramYouTubeApp() {
                 }
 
                 Screen.Approvals -> {
-                    Text(
-                        "Video approvals",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text("Video approvals",
+                        style = MaterialTheme.typography.headlineMedium)
                     if (pending) {
                         Card {
                             Column(
                                 Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    "Sample detected video",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Text("Sample detected video",
+                                    style = MaterialTheme.typography.titleMedium)
                                 Text("Source: Demo channel")
-                                Text(
-                                    "Placeholder only. No real video has been detected."
-                                )
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                Text("Placeholder only. No real video detected.")
+                                Row(horizontalArrangement =
+                                    Arrangement.spacedBy(8.dp)) {
                                     Button(onClick = {
                                         pending = false
-                                        activity.add(
-                                            "Demo item approved — no upload performed"
-                                        )
+                                        activity.add("Demo item approved — no upload performed")
                                     }) {
                                         Text("Approve (demo)")
                                     }
@@ -257,10 +214,8 @@ private fun TelegramYouTubeApp() {
                 }
 
                 Screen.Activity -> {
-                    Text(
-                        "Activity history",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text("Activity history",
+                        style = MaterialTheme.typography.headlineMedium)
                     LazyColumn {
                         items(activity.reversed()) { event ->
                             ListItem(headlineContent = { Text(event) })
@@ -269,16 +224,19 @@ private fun TelegramYouTubeApp() {
                 }
 
                 Screen.Settings -> {
-                    Text("Settings", style = MaterialTheme.typography.headlineMedium)
+                    Text("Settings",
+                        style = MaterialTheme.typography.headlineMedium)
                     ListItem(
                         headlineContent = { Text("YouTube account") },
                         supportingContent = {
-                            Text("Not connected — integration is not implemented")
+                            Text("Not connected — integration not implemented")
                         }
                     )
                     ListItem(
                         headlineContent = { Text("Notifications") },
-                        supportingContent = { Text("Not configured in this demo") }
+                        supportingContent = {
+                            Text("Not configured in this demo")
+                        }
                     )
                 }
             }
