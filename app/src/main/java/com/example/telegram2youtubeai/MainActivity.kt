@@ -2,6 +2,7 @@
 package com.example.telegram2youtubeai
 
 import android.os.Bundle
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import org.json.JSONArray
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +31,26 @@ private enum class Screen(val label: String) {
     Activity("Activity"), Settings("Settings")
 }
 
+private fun loadChannels(context: Context): List<String> {
+    val prefs = context.getSharedPreferences("telegram_youtube", Context.MODE_PRIVATE)
+    val saved = prefs.getString("channels", "[]") ?: "[]"
+    return try {
+        val array = JSONArray(saved)
+        List(array.length()) { index -> array.getString(index) }
+    } catch (_: Exception) {
+        emptyList()
+    }
+}
+
+private fun saveChannels(context: Context, channels: List<String>) {
+    val array = JSONArray()
+    channels.forEach { array.put(it) }
+    context.getSharedPreferences("telegram_youtube", Context.MODE_PRIVATE)
+        .edit()
+        .putString("channels", array.toString())
+        .apply()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TelegramYouTubeApp() {
@@ -36,7 +58,11 @@ private fun TelegramYouTubeApp() {
     var screen by remember { mutableStateOf(Screen.Home) }
     var monitoring by remember { mutableStateOf(false) }
     var channelInput by remember { mutableStateOf("") }
-    val channels = remember { mutableStateListOf<String>() }
+    val channels = remember {
+        mutableStateListOf<String>().apply {
+            addAll(loadChannels(context))
+        }
+    }
     val activity = remember { mutableStateListOf("Starter app opened") }
     var pending by remember { mutableStateOf(true) }
 
@@ -71,8 +97,7 @@ private fun TelegramYouTubeApp() {
         ) {
             when (screen) {
                 Screen.Home -> {
-                    Text("Dashboard",
-                        style = MaterialTheme.typography.headlineMedium)
+                    Text("Dashboard", style = MaterialTheme.typography.headlineMedium)
                     Card {
                         Column(Modifier.padding(16.dp)) {
                             Text("Monitoring")
@@ -102,7 +127,6 @@ private fun TelegramYouTubeApp() {
                 Screen.Channels -> {
                     Text("Authorized channels",
                         style = MaterialTheme.typography.headlineMedium)
-
                     OutlinedTextField(
                         value = channelInput,
                         onValueChange = { channelInput = it },
@@ -111,7 +135,6 @@ private fun TelegramYouTubeApp() {
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
-
                     Button(
                         onClick = {
                             val input = channelInput.trim()
@@ -130,7 +153,6 @@ private fun TelegramYouTubeApp() {
                                         "Please enter a channel username or link",
                                         Toast.LENGTH_SHORT).show()
                                 }
-
                                 channels.any {
                                     it.equals(username, ignoreCase = true)
                                 } -> {
@@ -138,13 +160,13 @@ private fun TelegramYouTubeApp() {
                                         "Channel already added",
                                         Toast.LENGTH_SHORT).show()
                                 }
-
                                 else -> {
                                     channels.add(username)
+                                    saveChannels(context, channels)
                                     activity.add("Channel added: @$username")
                                     channelInput = ""
                                     Toast.makeText(context,
-                                        "Channel added successfully",
+                                        "Channel saved successfully",
                                         Toast.LENGTH_SHORT).show()
                                 }
                             }
@@ -159,7 +181,6 @@ private fun TelegramYouTubeApp() {
                     if (channels.isEmpty()) {
                         Text("No channels added yet.")
                     }
-
                     LazyColumn {
                         items(channels) { channel ->
                             ListItem(
@@ -167,6 +188,7 @@ private fun TelegramYouTubeApp() {
                                 trailingContent = {
                                     IconButton(onClick = {
                                         channels.remove(channel)
+                                        saveChannels(context, channels)
                                         activity.add("Channel removed: @$channel")
                                     }) {
                                         Icon(Icons.Default.Delete,
